@@ -121,7 +121,7 @@ const PollDetails = () => {
 
       // Then submit via socket for real-time updates
       console.log('Submitting vote via socket...');
-      submitVote(id, optionId);
+      submitVote(id, optionId, userId);
 
       setHasVoted(true);
       console.log('Vote recorded successfully');

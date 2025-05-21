@@ -1,0 +1,68 @@
+services:
+  # Web service for the API
+  - type: web
+    name: team-polls-api
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build:client
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 24h
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: RATE_LIMIT_MAX
+        value: 100
+      - key: DB_HOST
+        fromService:
+          name: team-polls-db
+          type: pserv
+          property: host
+      - key: DB_PORT
+        value: 5432
+      - key: DB_NAME
+        value: team_polls
+      - key: DB_USER
+        fromService:
+          name: team-polls-db
+          type: pserv
+          property: user
+      - key: DB_PASSWORD
+        fromService:
+          name: team-polls-db
+          type: pserv
+          property: password
+      - key: REDIS_HOST
+        fromService:
+          name: team-polls-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        value: 6379
+    autoDeploy: true
+
+  # Redis service for caching and WebSocket scaling
+  - type: redis
+    name: team-polls-redis
+    ipAllowList: []
+    plan: free
+
+  # PostgreSQL database
+  - type: pserv
+    name: team-polls-db
+    env: postgres
+    plan: free
+    envVars:
+      - key: POSTGRES_USER
+        generateValue: true
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: team_polls

@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { authApi } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -12,29 +13,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       console.log('Initializing authentication...');
-      console.log('Current state:', { token, userId });
-
       // Check if token exists
       if (token && userId) {
-        console.log('Using existing token and userId');
+        console.log('Current state:', { token: token.substring(0, 20) + '...', userId });
         // Set axios default headers
         axios.defaults.headers.common['x-auth-token'] = token;
       } else {
         // Get anonymous token
+        console.log('Requesting new anonymous token...');
         try {
-          console.log('Requesting new anonymous token...');
-          const res = await axios.post('/api/auth/anon');
-          const { token: newToken, userId: newUserId } = res.data;
+          const { token: newToken, userId: newUserId } = await authApi.getAnonToken();
 
-          console.log('Received new token and userId:', {
-            token: newToken ? 'Token exists' : 'No token',
-            userId: newUserId || 'No userId'
+          console.log('Received new token:', {
+            token: newToken.substring(0, 20) + '...',
+            userId: newUserId
           });
-
-          if (!newToken || !newUserId) {
-            console.error('Invalid response from auth server - missing token or userId');
-            return;
-          }
 
           // Save to localStorage
           localStorage.setItem('token', newToken);
@@ -46,8 +39,6 @@ export const AuthProvider = ({ children }) => {
 
           // Set axios default headers
           axios.defaults.headers.common['x-auth-token'] = newToken;
-
-          console.log('Authentication initialized successfully');
         } catch (error) {
           console.error('Error getting anonymous token:', error);
           console.error('Error details:', error.response?.data || 'No response data');
@@ -57,7 +48,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
-  }, [token, userId]);
+  }, [token]);
 
   // Logout function
   const logout = () => {

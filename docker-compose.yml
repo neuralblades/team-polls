@@ -28,7 +28,7 @@ services:
       - DB_NAME=team_polls
       - DB_USER=postgres
       - DB_PASSWORD=postgres
-      - JWT_SECRET=${JWT_SECRET:-change_this_in_production}
+      - JWT_SECRET=2aaa84a36086a5d8bf427cda9ea6d3044225e3495c50c340e0f63b3b3c71bf93
       - JWT_EXPIRATION=24h
       - RATE_LIMIT_WINDOW_MS=60000
       - RATE_LIMIT_MAX=100
@@ -72,6 +72,42 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
 
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

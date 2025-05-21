@@ -114,6 +114,20 @@ To run the application in production mode using Docker:
 
 2. Access the application at http://localhost:5001
 
+### Cloud Deployment
+
+The application can be deployed to Render using the provided configuration:
+
+1. Push your code to GitHub
+
+2. Connect your GitHub repository to Render
+
+3. Use the `render.yaml` file for automatic deployment configuration
+
+4. Create the necessary secrets in Render dashboard
+
+5. Deploy the application
+
 ### Horizontal Scaling
 
 To run the application with multiple API instances for horizontal scaling:
@@ -228,8 +242,15 @@ team-polls/
 ├── docs/                   # Documentation files
 │   ├── curl-examples.md    # cURL examples
 │   └── team-polls-api.postman_collection.json # Postman collection
+├── prometheus/             # Prometheus configuration
+│   └── prometheus.yml      # Prometheus config file
+├── grafana/                # Grafana configuration
+│   └── provisioning/       # Grafana provisioning
+│       ├── dashboards/     # Dashboard definitions
+│       └── datasources/    # Data source definitions
 ├── .env.example            # Example environment variables
 ├── docker-compose.yml      # Docker Compose configuration
+├── render.yaml             # Render deployment configuration
 └── Dockerfile              # Docker configuration
 ```
 
@@ -245,13 +266,42 @@ The application is designed to scale horizontally to handle 10,000 concurrent us
 
 4. **Database Optimization**: Indexes and efficient queries ensure database performance under load.
 
-5. **Monitoring with Prometheus Metrics**: Real-time visibility into system performance.
+5. **Monitoring with Prometheus Metrics**: Real-time visibility into system performance with Prometheus and Grafana dashboards.
 
 To deploy for high scale:
 
 ```bash
 # Scale to multiple API instances
 docker-compose up -d --scale app=3
+```
+
+## Monitoring
+
+The application includes a comprehensive monitoring setup with Prometheus and Grafana:
+
+1. **Prometheus**: Collects metrics from the application
+   - Available at http://localhost:9090
+
+2. **Grafana**: Visualizes metrics with pre-configured dashboards
+   - Available at http://localhost:3000
+   - Default credentials: admin/admin
+   - Includes dashboards for:
+     - HTTP request rates and response times
+     - WebSocket connections
+     - Poll and vote metrics
+     - System resource usage
+
+To access the monitoring tools:
+
+```bash
+# Start the application with monitoring
+docker-compose up -d
+
+# Access Grafana
+open http://localhost:3000
+
+# Access Prometheus
+open http://localhost:9090
 ```
 
 ## License
