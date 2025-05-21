@@ -2,50 +2,78 @@ import { useState } from 'react';
 
 const PollOption = ({ option, totalVotes, onVote, selected, disabled }) => {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   // Calculate percentage
   const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
-  
+
   return (
-    <div 
+    <div
       className={`poll-option ${selected ? 'selected' : ''}`}
       onClick={() => !disabled && onVote(option.id)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ 
+      style={{
         cursor: disabled ? 'default' : 'pointer',
-        padding: '12px',
-        marginBottom: '10px',
-        borderRadius: '6px',
-        border: `1px solid ${selected ? 'var(--primary-color)' : 'var(--border-color)'}`,
-        backgroundColor: selected ? 'rgba(74, 107, 255, 0.1)' : isHovered && !disabled ? 'rgba(74, 107, 255, 0.05)' : 'white',
+        padding: '16px',
+        marginBottom: '16px',
+        borderRadius: '10px',
+        border: `2px solid ${selected ? 'var(--primary-color)' : 'var(--border-color)'}`,
+        backgroundColor: selected ? 'var(--primary-light)' : isHovered && !disabled ? 'rgba(67, 97, 238, 0.05)' : 'white',
         position: 'relative',
         overflow: 'hidden',
-        transition: 'all 0.2s ease'
+        transition: 'all var(--transition-speed)',
+        boxShadow: selected ? '0 4px 12px rgba(67, 97, 238, 0.15)' : isHovered && !disabled ? '0 4px 8px rgba(0, 0, 0, 0.05)' : 'none'
       }}
     >
       {/* Progress bar */}
-      <div 
+      <div
         style={{
           position: 'absolute',
           left: 0,
           top: 0,
           bottom: 0,
           width: `${percentage}%`,
-          backgroundColor: 'rgba(74, 107, 255, 0.1)',
+          backgroundColor: 'var(--primary-light)',
           zIndex: 0,
-          transition: 'width 0.5s ease-out'
+          transition: 'width 0.8s cubic-bezier(0.25, 1, 0.5, 1)'
         }}
       />
-      
+
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{
+        position: 'relative',
+        zIndex: 1,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
         <div>
-          <span>{option.text}</span>
+          <span style={{
+            fontWeight: selected ? '600' : '500',
+            fontSize: '1.1rem'
+          }}>
+            {option.text}
+          </span>
         </div>
-        <div>
-          <span style={{ fontWeight: 'bold' }}>{option.votes} votes</span>
-          <span style={{ marginLeft: '8px' }}>({percentage}%)</span>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end'
+        }}>
+          <span style={{
+            fontWeight: 'bold',
+            color: selected ? 'var(--primary-color)' : 'inherit'
+          }}>
+            {option.votes} votes
+          </span>
+          <span style={{
+            marginTop: '4px',
+            fontSize: '0.9rem',
+            color: 'var(--secondary-color)',
+            fontWeight: percentage > 50 ? '600' : 'normal'
+          }}>
+            {percentage}%
+          </span>
         </div>
       </div>
     </div>
