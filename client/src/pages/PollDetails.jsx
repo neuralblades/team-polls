@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { pollsApi } from '../services/api';
-import { initSocket, joinPoll, leavePoll, submitVote, getSocket } from '../services/socket';
+import { initSocket, joinPoll, leavePoll, submitVote } from '../services/socket';
 import PollOption from '../components/PollOption';
 import AuthContext from '../context/AuthContext';
 
@@ -46,23 +46,32 @@ const PollDetails = () => {
       }
     };
 
+    fetchPoll();
+  }, [id, userId, navigate]);
+
+  // Set up socket connection separately
+  useEffect(() => {
+    let socketInstance = null;
+
     // Initialize socket connection
     if (token) {
-      console.log('Initializing socket with token:', token ? 'Token exists' : 'No token');
-      const socket = initSocket(token);
+      console.log('Initializing socket with token:', token ? `${token.substring(0, 10)}...` : 'No token');
+      socketInstance = initSocket(token);
 
-      if (socket) {
+      if (socketInstance) {
         // Join poll room
         joinPoll(id);
 
         // Listen for poll updates
-        socket.on('poll:update', (updatedPoll) => {
+        socketInstance.on('poll:update', (updatedPoll) => {
+          console.log('Received poll update:', updatedPoll.title);
           setPoll(updatedPoll);
         });
 
         // Listen for errors
-        socket.on('error', (error) => {
+        socketInstance.on('error', (error) => {
           console.error('Socket error:', error);
+          setError(`Socket error: ${error.message || 'Unknown error'}`);
         });
       } else {
         console.error('Failed to initialize socket - no socket instance returned');
@@ -71,18 +80,16 @@ const PollDetails = () => {
       console.error('Cannot initialize socket - no authentication token available');
     }
 
-    fetchPoll();
-
     // Cleanup
     return () => {
-      leavePoll(id);
-      const socket = getSocket();
-      if (socket) {
-        socket.off('poll:update');
-        socket.off('error');
+      if (socketInstance) {
+        console.log('Cleaning up socket connection');
+        leavePoll(id);
+        socketInstance.off('poll:update');
+        socketInstance.off('error');
       }
     };
-  }, [id, token, userId, navigate]);
+  }, [id, token]);
 
   // Handle vote
   const handleVote = async (optionId) => {

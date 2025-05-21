@@ -9,14 +9,19 @@
     "dev:custom": "node scripts/start-dev.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "eslint .",
     "client": "cd client && npm run dev",
     "server": "nodemon server/index.js",
     "dev:full": "concurrently \"npm run server\" \"npm run client\"",
     "dev:full:custom": "concurrently \"npm run dev:custom\" \"npm run client\"",
     "init-db": "node scripts/init-db.js",
     "build:client": "cd client && npm run build",
-    "load-test": "artillery run tests/load-tests/basic.yml",
-    "load-test:heavy": "artillery run tests/load-tests/heavy.yml"
+    "load-test": "node load-tests/run-load-tests.js",
+    "load-test:basic": "artillery run load-tests/scenarios.yml",
+    "load-test:scale": "artillery run load-tests/scenarios.yml -e production",
+    "horizontal-scale": "docker-compose up -d --scale server=3",
+    "docs:api": "markdown-to-html -i API.md -o api-docs.html"
   },
   "keywords": [
     "polls",
@@ -45,7 +50,9 @@
   "devDependencies": {
     "artillery": "^2.0.3",
     "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
     "jest": "^29.7.0",
+    "markdown-to-html": "^0.0.13",
     "nodemon": "^3.0.2",
     "supertest": "^6.3.3"
   }

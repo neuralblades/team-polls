@@ -1,0 +1,138 @@
+config:
+  target: "http://localhost:5001"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 100
+      name: "Warm up phase"
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 500
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 500
+      name: "Sustained load"
+  environments:
+    production:
+      target: "https://your-production-url.com"
+      phases:
+        - duration: 300
+          arrivalRate: 50
+          rampTo: 500
+          name: "Production test"
+  plugins:
+    expect: {}
+  processor: "./functions.js"
+
+scenarios:
+  - name: "Anonymous user views and votes on polls"
+    flow:
+      # Get anonymous token
+      - post:
+          url: "/api/auth/anon"
+          capture:
+            - json: "$.token"
+              as: "token"
+            - json: "$.userId"
+              as: "userId"
+          expect:
+            - statusCode: 200
+            - hasProperty: "token"
+            - hasProperty: "userId"
+      
+      # Get list of polls
+      - get:
+          url: "/api/polls"
+          headers:
+            x-auth-token: "{{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "pollId"
+          expect:
+            - statusCode: 200
+            - isArray
+      
+      # View a specific poll
+      - get:
+          url: "/api/polls/{{ pollId }}"
+          headers:
+            x-auth-token: "{{ token }}"
+          capture:
+            - json: "$.options[0].id"
+              as: "optionId"
+          expect:
+            - statusCode: 200
+            - hasProperty: "options"
+      
+      # Vote on the poll
+      - post:
+          url: "/api/polls/{{ pollId }}/vote"
+          headers:
+            x-auth-token: "{{ token }}"
+          json:
+            optionId: "{{ optionId }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "options"
+      
+      # View the poll again to see results
+      - get:
+          url: "/api/polls/{{ pollId }}"
+          headers:
+            x-auth-token: "{{ token }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "total_votes"
+  
+  - name: "Create new poll and vote"
+    flow:
+      # Get anonymous token
+      - post:
+          url: "/api/auth/anon"
+          capture:
+            - json: "$.token"
+              as: "token"
+            - json: "$.userId"
+              as: "userId"
+          expect:
+            - statusCode: 200
+      
+      # Create a new poll
+      - post:
+          url: "/api/polls"
+          headers:
+            x-auth-token: "{{ token }}"
+          json:
+            title: "Load Test Poll {{ $randomString(10) }}"
+            description: "This is a load test poll created by Artillery"
+            options: ["Option 1", "Option 2", "Option 3"]
+            expiresAt: "{{ $getExpirationDate() }}"
+          capture:
+            - json: "$.id"
+              as: "newPollId"
+            - json: "$.options[0].id"
+              as: "newOptionId"
+          expect:
+            - statusCode: 201
+            - hasProperty: "id"
+      
+      # Vote on the new poll
+      - post:
+          url: "/api/polls/{{ newPollId }}/vote"
+          headers:
+            x-auth-token: "{{ token }}"
+          json:
+            optionId: "{{ newOptionId }}"
+          expect:
+            - statusCode: 200
+      
+      # View the poll results
+      - get:
+          url: "/api/polls/{{ newPollId }}"
+          headers:
+            x-auth-token: "{{ token }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "total_votes"
+            - equals: "total_votes"
+              value: 1

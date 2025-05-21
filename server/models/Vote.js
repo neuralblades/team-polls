@@ -1,5 +1,6 @@
 const db = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const { redisClient } = require('../redis');
 
 class Vote {
   // Create a new vote
@@ -44,6 +45,17 @@ class Vote {
 
       await client.query('COMMIT');
       console.log(`Vote transaction committed successfully - Poll: ${pollId}, User: ${userId}`);
+
+      // Invalidate poll cache
+      try {
+        if (redisClient.isReady) {
+          await redisClient.del(`poll:${pollId}`);
+          console.log(`Invalidated cache for poll ${pollId}`);
+        }
+      } catch (error) {
+        console.error('Redis cache invalidation error:', error);
+        // Continue even if cache invalidation fails
+      }
 
       return true;
     } catch (error) {

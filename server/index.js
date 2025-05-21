@@ -9,6 +9,7 @@ const db = require('./db');
 const { connectRedis } = require('./redis');
 const setupRedisAdapter = require('./socket/adapter');
 const metrics = require('./metrics');
+const { startPollExpirationChecker } = require('./jobs/pollExpirationChecker');
 
 // Import routes
 const pollRoutes = require('./routes/polls');
@@ -54,7 +55,7 @@ app.use(metrics.metricsMiddleware);
 app.use(apiRateLimiter);
 
 // Health check route
-app.get('/health', async (req, res) => {
+app.get('/health', async (_req, res) => {
   try {
     const dbConnected = await db.testConnection();
     res.json({
@@ -70,7 +71,7 @@ app.get('/health', async (req, res) => {
 });
 
 // Metrics endpoint
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', async (_req, res) => {
   try {
     res.set('Content-Type', metrics.register.contentType);
     res.end(await metrics.register.metrics());
@@ -88,13 +89,13 @@ app.use('/api/auth', authRoutes);
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 
-  app.get('*', (req, res) => {
+  app.get('*', (_req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error(err.stack);
   res.status(500).json({
     message: 'Something went wrong!',
@@ -108,6 +109,9 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Health check available at http://localhost:${PORT}/health`);
   console.log(`Metrics available at http://localhost:${PORT}/metrics`);
+
+  // Start the poll expiration checker job (check every minute)
+  startPollExpirationChecker(60000);
 });
 
 module.exports = { app, server, io };
