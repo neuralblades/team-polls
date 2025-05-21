@@ -2,48 +2,46 @@ require('dotenv').config();
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
 
 async function initializeDatabase() {
   try {
     console.log('Reading schema file...');
     const schemaSQL = fs.readFileSync(path.join(__dirname, '../server/db/schema.sql'), 'utf8');
 
-    // Write schema to a temporary file
-    const tempFilePath = path.join(__dirname, 'temp-schema.sql');
-    fs.writeFileSync(tempFilePath, schemaSQL);
+    console.log('Connecting to database...');
+    console.log('Host:', process.env.DB_HOST);
+    console.log('Port:', process.env.DB_PORT);
+    console.log('Database:', process.env.DB_NAME);
+    console.log('User:', process.env.DB_USER);
 
-    console.log('Executing schema using Docker...');
-
-    // Execute the SQL file using docker exec
-    const dockerCpCmd = `docker cp "${tempFilePath}" teampolls-db-1:/tmp/schema.sql`;
-    const dockerExecCmd = `docker exec teampolls-db-1 psql -U postgres -d team_polls -f /tmp/schema.sql`;
-
-    console.log('Copying schema to container...');
-    exec(dockerCpCmd, (cpError, cpStdout, cpStderr) => {
-      if (cpError) {
-        console.error('Error copying schema to container:', cpError);
-        console.error(cpStderr);
-        // Remove the temporary file
-        fs.unlinkSync(tempFilePath);
-        process.exit(1);
-      }
-
-      console.log('Executing schema in container...');
-      exec(dockerExecCmd, (execError, execStdout, execStderr) => {
-        // Remove the temporary file
-        fs.unlinkSync(tempFilePath);
-
-        if (execError) {
-          console.error('Error executing schema in container:', execError);
-          console.error(execStderr);
-          process.exit(1);
-        }
-
-        console.log(execStdout);
-        console.log('Database initialized successfully!');
-        process.exit(0);
-      });
+    // Create a connection pool
+    const pool = new Pool({
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
     });
+
+    // Get a client from the pool
+    const client = await pool.connect();
+
+    console.log('Connected to database. Executing schema...');
+
+    // Execute the schema SQL
+    await client.query(schemaSQL);
+
+    console.log('Schema executed successfully!');
+
+    // Release the client back to the pool
+    client.release();
+
+    // Close the pool
+    await pool.end();
+
+    console.log('Database initialized successfully!');
+    process.exit(0);
   } catch (error) {
     console.error('Error initializing database:', error);
     process.exit(1);

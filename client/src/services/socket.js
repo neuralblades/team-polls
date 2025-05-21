@@ -5,33 +5,34 @@ let socket;
 
 // Initialize socket connection
 export const initSocket = (token) => {
-  const SOCKET_URL = import.meta.env.PROD ? '/' : 'http://localhost:5000';
-  
+  const SOCKET_URL = import.meta.env.PROD ? '/' : 'http://localhost:5001';
+
   // Close existing connection if any
   if (socket) {
     socket.disconnect();
   }
-  
+
   // Create new connection
   socket = io(SOCKET_URL, {
     auth: {
       token
-    }
+    },
+    withCredentials: true
   });
-  
+
   // Connection events
   socket.on('connect', () => {
     console.log('Socket connected');
   });
-  
+
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error.message);
   });
-  
+
   socket.on('disconnect', (reason) => {
     console.log('Socket disconnected:', reason);
   });
-  
+
   return socket;
 };
 

@@ -13,11 +13,19 @@ const auth = (req, res, next) => {
   try {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // Add user from payload
-    req.user = decoded;
+    req.user = decoded.user;
+
+    // Log authentication info for debugging
+    console.log('Auth middleware - User authenticated:', {
+      userId: req.user.id,
+      isAnonymous: req.user.isAnonymous
+    });
+
     next();
   } catch (err) {
+    console.error('Auth middleware - Token verification failed:', err.message);
     res.status(401).json({ message: 'Token is not valid' });
   }
 };

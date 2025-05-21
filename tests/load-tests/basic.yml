@@ -1,0 +1,68 @@
+config:
+  target: "http://localhost:5001"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 50
+      name: "Warm up phase"
+    - duration: 120
+      arrivalRate: 50
+      rampTo: 100
+      name: "Ramp up load"
+    - duration: 180
+      arrivalRate: 100
+      name: "Sustained load"
+  plugins:
+    metrics-by-endpoint: {}
+  processor: "./functions.js"
+
+scenarios:
+  - name: "Anonymous user flow"
+    flow:
+      # Get anonymous token
+      - get:
+          url: "/api/auth/anon"
+          capture:
+            - json: "$.token"
+              as: "token"
+            - json: "$.userId"
+              as: "userId"
+      
+      # Get all polls
+      - get:
+          url: "/api/polls"
+          headers:
+            x-auth-token: "{{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "pollId"
+              when: "!!$[0]"
+      
+      # Create a new poll if none exists
+      - function: "createPollIfNeeded"
+      
+      # Get poll details
+      - get:
+          url: "/api/polls/{{ pollId }}"
+          headers:
+            x-auth-token: "{{ token }}"
+          capture:
+            - json: "$.options[0].id"
+              as: "optionId"
+      
+      # Vote on the poll
+      - post:
+          url: "/api/polls/{{ pollId }}/vote"
+          headers:
+            x-auth-token: "{{ token }}"
+            Content-Type: "application/json"
+          json:
+            optionId: "{{ optionId }}"
+      
+      # Check health endpoint
+      - get:
+          url: "/health"
+      
+      # Check metrics endpoint
+      - get:
+          url: "/metrics"

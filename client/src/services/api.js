@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // Set base URL for API requests
-const API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api');
 
 // Create axios instance
 const api = axios.create({
@@ -36,7 +38,7 @@ export const pollsApi = {
       throw error;
     }
   },
-  
+
   // Get poll by ID
   getPoll: async (id) => {
     try {
@@ -46,7 +48,7 @@ export const pollsApi = {
       throw error;
     }
   },
-  
+
   // Create new poll
   createPoll: async (pollData) => {
     try {
@@ -56,7 +58,7 @@ export const pollsApi = {
       throw error;
     }
   },
-  
+
   // Vote on a poll
   votePoll: async (pollId, optionId) => {
     try {

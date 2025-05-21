@@ -1,0 +1,91 @@
+config:
+  target: "http://localhost:5001"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 100
+      name: "Warm up phase"
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 500
+      name: "Ramp up load"
+    - duration: 180
+      arrivalRate: 500
+      rampTo: 1000
+      name: "Heavy load"
+    - duration: 240
+      arrivalRate: 1000
+      name: "Sustained heavy load"
+  plugins:
+    metrics-by-endpoint: {}
+  processor: "./functions.js"
+  http:
+    pool: 100
+    timeout: 30
+
+scenarios:
+  - name: "Anonymous user flow with WebSocket"
+    engine: "socketio"
+    flow:
+      # Get anonymous token
+      - get:
+          url: "/api/auth/anon"
+          capture:
+            - json: "$.token"
+              as: "token"
+            - json: "$.userId"
+              as: "userId"
+      
+      # Get all polls
+      - get:
+          url: "/api/polls"
+          headers:
+            x-auth-token: "{{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "pollId"
+              when: "!!$[0]"
+      
+      # Create a new poll if none exists
+      - function: "createPollIfNeeded"
+      
+      # Connect to WebSocket
+      - connect:
+          query:
+            token: "{{ token }}"
+            userId: "{{ userId }}"
+      
+      # Join poll room
+      - emit:
+          channel: "poll:join"
+          data: "{{ pollId }}"
+      
+      # Wait for poll data
+      - think: 1
+      
+      # Vote on poll via WebSocket
+      - emit:
+          channel: "poll:vote"
+          data:
+            pollId: "{{ pollId }}"
+            optionId: "{{ optionId }}"
+            userId: "{{ userId }}"
+      
+      # Wait for updates
+      - think: 2
+      
+      # Leave poll room
+      - emit:
+          channel: "poll:leave"
+          data: "{{ pollId }}"
+      
+      # Disconnect
+      - disconnect: {}
+      
+      # Check health endpoint
+      - get:
+          url: "/health"
+      
+      # Check metrics endpoint
+      - get:
+          url: "/metrics"

@@ -11,6 +11,8 @@ A real-time polling application for teams, similar to Slido, built with Node.js,
 - Scalable to 10,000 concurrent users
 - Containerized with Docker for easy deployment
 - Rate limiting for API protection
+- Redis for caching and WebSocket scaling
+- Prometheus metrics for monitoring
 
 ## Tech Stack
 
@@ -19,6 +21,8 @@ A real-time polling application for teams, similar to Slido, built with Node.js,
   - Socket.io for real-time communication
   - JWT for authentication
   - PostgreSQL for data persistence
+  - Redis for caching and scaling
+  - Prometheus metrics for monitoring
 
 - **Frontend**:
   - React with Vite
@@ -36,7 +40,9 @@ The application follows a client-server architecture:
 1. **Client**: React application that communicates with the server via REST API and WebSockets
 2. **Server**: Express server that handles API requests and WebSocket connections
 3. **Database**: PostgreSQL database for storing polls, options, and votes
-4. **WebSockets**: Socket.io for real-time updates between clients
+4. **Cache**: Redis for caching, rate limiting, and WebSocket scaling
+5. **WebSockets**: Socket.io for real-time updates between clients
+6. **Metrics**: Prometheus-format metrics for monitoring system performance
 
 ## Getting Started
 
@@ -46,6 +52,7 @@ The application follows a client-server architecture:
 - npm or yarn
 - Docker and Docker Compose (for containerized deployment)
 - PostgreSQL (if running without Docker)
+- Redis (if running without Docker)
 
 ### Development Setup
 
@@ -105,7 +112,28 @@ To run the application in production mode using Docker:
    ./scripts/start.sh
    ```
 
-2. Access the application at http://localhost:5000
+2. Access the application at http://localhost:5001
+
+### Horizontal Scaling
+
+To run the application with multiple API instances for horizontal scaling:
+
+1. Use the scaling script:
+   ```bash
+   ./scripts/start-scaled.sh 3  # Start with 3 API instances
+   ```
+
+   Or manually with Docker Compose:
+   ```bash
+   docker-compose up -d --scale app=3
+   ```
+
+2. Access the application at http://localhost:5001
+
+The application uses:
+- Nginx as a load balancer
+- Redis for session storage and WebSocket scaling
+- PostgreSQL for data persistence
 
 ## Testing
 
@@ -116,6 +144,10 @@ npm test
 ```
 
 ## API Documentation
+
+For detailed API documentation, see:
+- [Postman Collection](./docs/team-polls-api.postman_collection.json)
+- [cURL Examples](./docs/curl-examples.md)
 
 ### Authentication
 
@@ -138,6 +170,14 @@ npm test
 - `GET /api/polls`: Get all polls
   - Query params: `limit` (default: 10), `offset` (default: 0)
   - Response: Array of poll objects
+
+### System
+
+- `GET /health`: Health check endpoint
+  - Response: `{ status: string, database: string }`
+
+- `GET /metrics`: Prometheus metrics endpoint
+  - Response: Prometheus-format metrics
 
 ## WebSocket Events
 
@@ -180,12 +220,38 @@ team-polls/
 │   ├── models/             # Data models
 │   ├── routes/             # API routes
 │   ├── socket/             # WebSocket implementation
+│   ├── redis/              # Redis client and utilities
+│   ├── metrics/            # Prometheus metrics
 │   └── index.js            # Server entry point
 ├── scripts/                # Utility scripts
 ├── tests/                  # Test files
+├── docs/                   # Documentation files
+│   ├── curl-examples.md    # cURL examples
+│   └── team-polls-api.postman_collection.json # Postman collection
 ├── .env.example            # Example environment variables
 ├── docker-compose.yml      # Docker Compose configuration
 └── Dockerfile              # Docker configuration
+```
+
+## Scaling to 10,000 Concurrent Users
+
+The application is designed to scale horizontally to handle 10,000 concurrent users:
+
+1. **Redis for WebSocket Scaling**: Using Socket.IO with Redis adapter allows multiple server instances to share WebSocket connections.
+
+2. **Rate Limiting with Redis**: Prevents abuse and ensures fair resource allocation.
+
+3. **Horizontal Scaling**: The Docker Compose setup can be extended to run multiple API instances behind a load balancer.
+
+4. **Database Optimization**: Indexes and efficient queries ensure database performance under load.
+
+5. **Monitoring with Prometheus Metrics**: Real-time visibility into system performance.
+
+To deploy for high scale:
+
+```bash
+# Scale to multiple API instances
+docker-compose up -d --scale app=3
 ```
 
 ## License

@@ -6,13 +6,16 @@ const helmet = require('helmet');
 const { Server } = require('socket.io');
 const path = require('path');
 const db = require('./db');
+const { connectRedis } = require('./redis');
+const setupRedisAdapter = require('./socket/adapter');
+const metrics = require('./metrics');
 
 // Import routes
 const pollRoutes = require('./routes/polls');
 const authRoutes = require('./routes/auth');
 
 // Import middleware
-const rateLimiter = require('./middleware/rateLimiter');
+const { apiRateLimiter } = require('./middleware/rateLimiter');
 
 // Create Express app
 const app = express();
@@ -26,14 +29,29 @@ const io = new Server(server, {
   }
 });
 
+// Set up Redis adapter for Socket.IO
+setupRedisAdapter(io)
+  .then(() => console.log('Redis adapter setup complete'))
+  .catch(err => console.error('Redis adapter setup failed:', err));
+
 // Initialize socket handlers
 require('./socket')(io);
+
+// Track WebSocket connections
+io.on('connection', (socket) => {
+  metrics.websocketConnectionsGauge.inc();
+
+  socket.on('disconnect', () => {
+    metrics.websocketConnectionsGauge.dec();
+  });
+});
 
 // Middleware
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
-app.use(rateLimiter);
+app.use(metrics.metricsMiddleware);
+app.use(apiRateLimiter);
 
 // Health check route
 app.get('/health', async (req, res) => {
@@ -48,6 +66,17 @@ app.get('/health', async (req, res) => {
       status: 'error',
       message: error.message
     });
+  }
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', metrics.register.contentType);
+    res.end(await metrics.register.metrics());
+  } catch (error) {
+    console.error('Error generating metrics:', error);
+    res.status(500).send('Error generating metrics');
   }
 });
 
@@ -78,6 +107,7 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Health check available at http://localhost:${PORT}/health`);
+  console.log(`Metrics available at http://localhost:${PORT}/metrics`);
 });
 
 module.exports = { app, server, io };
