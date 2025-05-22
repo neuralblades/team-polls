@@ -12,7 +12,7 @@ const server = spawn('node', [path.join(__dirname, '../server/index.js')], {
     DB_NAME: 'team_polls',
     DB_USER: 'postgres',
     DB_PASSWORD: 'postgres',
-    JWT_SECRET: 'dev_secret_key_change_in_production',
+    JWT_SECRET: faf9a7a3e2b888c3f4df1d3001ee2d205eb7127e6097518002f2f29c5bb683a9,
     JWT_EXPIRATION: '24h',
     RATE_LIMIT_WINDOW_MS: 60000,
     RATE_LIMIT_MAX: 100

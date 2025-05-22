@@ -26,7 +26,7 @@ services:
       - DB_NAME=team_polls
       - DB_USER=postgres
       - DB_PASSWORD=postgres
-      - JWT_SECRET=2aaa84a36086a5d8bf427cda9ea6d3044225e3495c50c340e0f63b3b3c71bf93
+      - JWT_SECRET=faf9a7a3e2b888c3f4df1d3001ee2d205eb7127e6097518002f2f29c5bb683a9
       - JWT_EXPIRATION=24h
       - RATE_LIMIT_WINDOW_MS=60000
       - RATE_LIMIT_MAX=100
